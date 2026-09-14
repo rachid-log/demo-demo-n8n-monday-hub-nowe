@@ -1,0 +1,106 @@
+# ==============================================================================
+# CreaBeast Prototype Boilerplate — Docker Compose Stack
+#
+# Tailored for VPS Deployment behind Traefik on the `root_default` network.
+# Traefik resolves `mytlschallenge` certificates and proxies port 443 -> 3000.
+#
+# Quickstart:
+#   1. Copy .env.example -> .env
+#   2. Set SUBDOMAIN=mysaas (will be reachable at https://mysaas.creabeast.com)
+#   3. Deploy web-only:
+#        docker compose up -d --build
+#      Deploy with local PostgreSQL:
+#        docker compose --profile with-db up -d --build
+# ==============================================================================
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${COMPOSE_PROJECT_NAME:-prototype}-${SUBDOMAIN:-demo}:latest
+    container_name: ${COMPOSE_PROJECT_NAME:-prototype}-${SUBDOMAIN:-demo}-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - SUBDOMAIN=${SUBDOMAIN:-demo}
+      - DATABASE_URL=${DATABASE_URL:-}
+    stop_grace_period: 30s
+
+    # ── Memory ceiling (OOM protection for shared VPS) ────────────────────────
+    # Limits container usage to protect neighbouring services (n8n, Traefik, etc.)
+    mem_limit: 1536m
+    memswap_limit: 2048m
+
+    # ── Traefik reverse proxy routing ─────────────────────────────────────────
+    # Dynamically registered with Traefik v2+ on the shared root_default network.
+    # Router name is scoped to ${SUBDOMAIN:-demo} to avoid collisions between prototypes.
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.${SUBDOMAIN:-demo}.rule=Host(`${SUBDOMAIN:-demo}.creabeast.com`)"
+      - "traefik.http.routers.${SUBDOMAIN:-demo}.entrypoints=websecure"
+      - "traefik.http.routers.${SUBDOMAIN:-demo}.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.${SUBDOMAIN:-demo}.loadbalancer.server.port=3000"
+      - "traefik.docker.network=root_default"
+
+    networks:
+      - default
+      - root_default
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Optional PostgreSQL Service ─────────────────────────────────────────────
+  # Activated using: docker compose --profile with-db up -d
+  # Isolated entirely within the stack's private `default` network (never on root_default).
+  db:
+    image: postgres:16-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-prototype}-${SUBDOMAIN:-demo}-db
+    profiles:
+      - with-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-prototype}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - default
+    mem_limit: 512m
+    memswap_limit: 768m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-postgres} -d $${POSTGRES_DB:-prototype}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+
+networks:
+  default:
+  root_default:
+    # Pre-existing external network managed by Traefik.
+    # Joining it allows Traefik to route https://${SUBDOMAIN}.creabeast.com -> web:3000
+    external: true
