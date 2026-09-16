@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Prototype Boilerplate | CreaBeast VPS",
+  title: "FlowForge AI | n8n & Monday.com Automation Hub",
   description:
-    "Production-ready Next.js starter boilerplate tailored for Traefik VPS deployment and autonomous agy agents.",
+    "Autonomous n8n workflow builder, Monday.com workspace simulator, AI structured data extraction playground, and BI analytics dashboard.",
 };
 
 export default function RootLayout({
@@ -25,7 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} dark`}>
-      <body className="min-h-screen bg-neutral-950 text-neutral-100 antialiased font-sans flex flex-col">
+      <body className="min-h-screen bg-slate-900 text-slate-100 antialiased font-sans flex flex-col">
         {children}
       </body>
     </html>

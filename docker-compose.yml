@@ -18,8 +18,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: ${COMPOSE_PROJECT_NAME:-prototype}-${SUBDOMAIN:-demo}:latest
-    container_name: ${COMPOSE_PROJECT_NAME:-prototype}-${SUBDOMAIN:-demo}-web
+    image: demo-demo-n8n-monday-hub-nowe-demo-n8n-monday-hub-nowe:latest
+    container_name: demo-demo-n8n-monday-hub-nowe-demo-n8n-monday-hub-nowe-web
     restart: unless-stopped
     env_file:
       - .env
@@ -27,7 +27,7 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - SUBDOMAIN=${SUBDOMAIN:-demo}
+      - SUBDOMAIN=demo-n8n-monday-hub-nowe
       - DATABASE_URL=${DATABASE_URL:-}
     stop_grace_period: 30s
 
@@ -38,13 +38,13 @@ services:
 
     # ── Traefik reverse proxy routing ─────────────────────────────────────────
     # Dynamically registered with Traefik v2+ on the shared root_default network.
-    # Router name is scoped to ${SUBDOMAIN:-demo} to avoid collisions between prototypes.
+    # Router name is scoped to demo-n8n-monday-hub-nowe to avoid collisions between prototypes.
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.${SUBDOMAIN:-demo}.rule=Host(`${SUBDOMAIN:-demo}.creabeast.com`)"
-      - "traefik.http.routers.${SUBDOMAIN:-demo}.entrypoints=websecure"
-      - "traefik.http.routers.${SUBDOMAIN:-demo}.tls.certresolver=mytlschallenge"
-      - "traefik.http.services.${SUBDOMAIN:-demo}.loadbalancer.server.port=3000"
+      - "traefik.http.routers.demo-n8n-monday-hub-nowe.rule=Host(`demo-n8n-monday-hub-nowe.creabeast.com`)"
+      - "traefik.http.routers.demo-n8n-monday-hub-nowe.entrypoints=websecure"
+      - "traefik.http.routers.demo-n8n-monday-hub-nowe.tls.certresolver=mytlschallenge"
+      - "traefik.http.services.demo-n8n-monday-hub-nowe.loadbalancer.server.port=3000"
       - "traefik.docker.network=root_default"
 
     networks:
@@ -69,7 +69,7 @@ services:
   # Isolated entirely within the stack's private `default` network (never on root_default).
   db:
     image: postgres:16-alpine
-    container_name: ${COMPOSE_PROJECT_NAME:-prototype}-${SUBDOMAIN:-demo}-db
+    container_name: demo-demo-n8n-monday-hub-nowe-demo-n8n-monday-hub-nowe-db
     profiles:
       - with-db
     restart: unless-stopped
@@ -102,5 +102,5 @@ networks:
   default:
   root_default:
     # Pre-existing external network managed by Traefik.
-    # Joining it allows Traefik to route https://${SUBDOMAIN}.creabeast.com -> web:3000
+    # Joining it allows Traefik to route https://demo-n8n-monday-hub-nowe.creabeast.com -> web:3000
     external: true

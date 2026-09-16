@@ -27,3 +27,63 @@ model Project {
   userId      String?
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }
+
+model Workflow {
+  id          String              @id @default(uuid())
+  name        String
+  description String
+  isActive    Boolean             @default(true)
+  nodes       Json                // Array of node objects: { id, type, name, config }
+  edges       Json                // Array of edge objects: { source, target }
+  executions  WorkflowExecution[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model WorkflowExecution {
+  id          String         @id @default(uuid())
+  workflowId  String
+  workflow    Workflow       @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  status      ExecutionStatus
+  triggerType String         // e.g., "Webhook", "Schedule", "Monday.com Event"
+  payload     Json           // Input payload
+  output      Json?          // Final output payload
+  durationMs  Int
+  cost        Float          @default(0.0) // Simulated AI cost
+  logs        Json           // Array of log steps: { timestamp, nodeName, status, message }
+  createdAt   DateTime       @default(now())
+}
+
+enum ExecutionStatus {
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model MondayBoard {
+  id        String   @id @default(uuid())
+  name      String
+  columns   Json     // Array of columns: { id, title, type }
+  items     Json     // Array of items: { id, name, columnValues: Record<string, any> }
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BIMetric {
+  id             String   @id @default(uuid())
+  date           DateTime @unique
+  totalExecutions Int
+  successRate    Float
+  costSaved      Float
+  dataThroughput Int      // Number of records processed
+  createdAt      DateTime @default(now())
+}
+
+model AIPromptTemplate {
+  id           String   @id @default(uuid())
+  name         String
+  systemPrompt String
+  userPrompt   String
+  schema       Json     // Expected JSON output structure
+  createdAt    DateTime @default(now())
+}
